@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Multi-Functional Calculator</title>
+    <link rel="icon" type="image/png" href="logo-logo.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.1/math.min.js"></script>
+    <style>
+        :root {
+            --bg-start: #1a202c;
+            --bg-end: #2d3748;
+            --surface-bg: rgba(45, 55, 72, 0.5);
+            --surface-border: rgba(255, 255, 255, 0.1);
+            --primary-btn-start: #4a5568;
+            --primary-btn-end: #718096;
+            --secondary-btn-start: #718096;
+            --secondary-btn-end: #a0aec0;
+            --accent-start: #fb923c;
+            --accent-end: #f97316;
+            --text-primary: #edf2f7;
+            --text-secondary: #a0aec0;
+            --text-accent: #fb923c;
+            --btn-secondary-text: #1a202c;
+        }
+        
+        body.light-mode {
+            --bg-start: #f8f9fa;
+            --bg-end: #e9ecef;
+            --surface-bg: rgba(255, 255, 255, 0.6);
+            --surface-border: rgba(0, 0, 0, 0.1);
+            --primary-btn-start: #e9ecef;
+            --primary-btn-end: #dee2e6;
+            --secondary-btn-start: #ced4da;
+            --secondary-btn-end: #adb5bd;
+            --accent-start: #0d6efd;
+            --accent-end: #0a58ca;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --text-accent: #0d6efd;
+            --btn-secondary-text: #212529;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
+            color: var(--text-primary);
+            transition: all 0.5s ease;
+        }
+
+        .calculator-container {
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            background: var(--surface-bg);
+            border: 1px solid var(--surface-border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: all 0.5s ease;
+        }
+
+        .tab-button {
+            transition: all 0.3s ease;
+            background-color: transparent;
+            border: 1px solid transparent;
+        }
+
+        .tab-button:hover {
+            background-color: rgba(150, 150, 150, 0.1);
+        }
+        
+        .tab-button.active {
+            color: var(--text-accent);
+            border-bottom: 2px solid var(--text-accent);
+            transform: translateY(-2px);
+        }
+        
+        .tab-content {
+            transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+        }
+
+        .tab-content.hidden {
+            opacity: 0;
+            transform: translateY(10px);
+            position: absolute; /* Prevent layout shift during transition */
+            pointer-events: none;
+            width: 100%;
+        }
+
+        .display {
+            background: rgba(0, 0, 0, 0.3);
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        body.light-mode .display {
+             background: rgba(0, 0, 0, 0.05);
+        }
+
+        .btn {
+            @apply w-full h-16 rounded-xl text-xl md:text-2xl font-semibold flex items-center justify-center transition-all duration-200;
+            border: 1px solid var(--surface-border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+            transform: perspective(500px) rotateX(0deg);
+        }
+        .btn:active {
+            transform: scale(0.95) perspective(500px) rotateX(5deg);
+            box-shadow: 0 2px 3px -1px rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(145deg, var(--primary-btn-start), var(--primary-btn-end));
+        }
+        .btn-secondary {
+            background: linear-gradient(145deg, var(--secondary-btn-start), var(--secondary-btn-end));
+            color: var(--btn-secondary-text);
+        }
+        .btn-operator {
+            background: linear-gradient(145deg, var(--accent-start), var(--accent-end));
+            color: white;
+        }
+        body.light-mode .btn-operator {
+            color: #f8f9fa;
+        }
+        
+        .modern-input, .modern-select {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--surface-border);
+            transition: all 0.3s ease;
+        }
+        body.light-mode .modern-input, body.light-mode .modern-select {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        .modern-input:focus, .modern-select:focus {
+            outline: none;
+            border-color: var(--text-accent);
+            box-shadow: 0 0 0 2px var(--accent-start);
+        }
+        
+        .summary-card {
+            background: rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        body.light-mode .summary-card {
+             background: rgba(0, 0, 0, 0.05);
+        }
+        
+        .text-accent { color: var(--text-accent); }
+        .text-primary { color: var(--text-primary); }
+        .text-secondary { color: var(--text-secondary); }
+
+    </style>
+</head>
+<body class="">
+
+    <header class="w-full max-w-md md:max-w-2xl mx-auto flex justify-between items-center mb-4 px-2">
+        <img id="top-logo" src="headerlogo2.png" width="100" height="auto" alt="Logo">
+        <div class="flex items-center gap-4">
+            <div id="clock" class="text-base md:text-lg font-semibold text-primary text-shadow">12:00:00 AM</div>
+            <button id="theme-toggle" class="p-2 rounded-full bg-white/10 hover:bg-white/20 transition">
+                <svg id="theme-icon-dark" class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                <svg id="theme-icon-light" class="w-5 h-5 text-primary hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="w-full max-w-md md:max-w-2xl mx-auto">
+        <div class="calculator-container p-4 sm:p-6 rounded-2xl">
+            <!-- Tabs -->
+            <div class="flex flex-wrap justify-center gap-2 mb-4 border-b border-white/10 pb-2">
+                <button class="tab-button active px-3 py-2 rounded-t-lg font-semibold" onclick="openTab('standard')">Standard</button>
+                <button class="tab-button px-3 py-2 rounded-t-lg font-semibold" onclick="openTab('scientific')">Scientific</button>
+                <button class="tab-button px-3 py-2 rounded-t-lg font-semibold" onclick="openTab('percentage')">Percentage</button>
+                <button class="tab-button px-3 py-2 rounded-t-lg font-semibold" onclick="openTab('currency')">Currency</button>
+                <button class="tab-button px-3 py-2 rounded-t-lg font-semibold" onclick="openTab('bmi')">BMI</button>
+                <button class="tab-button px-3 py-2 rounded-t-lg font-semibold" onclick="openTab('age')">Age</button>
+                <button class="tab-button px-3 py-2 rounded-t-lg font-semibold" onclick="openTab('area')">Area</button>
+                <button class="tab-button px-3 py-2 rounded-t-lg font-semibold" onclick="openTab('date')">Date</button>
+                <button class="tab-button px-3 py-2 rounded-t-lg font-semibold" onclick="openTab('history')">History</button>
+            </div>
+
+            <div class="relative min-h-[500px] md:min-h-[450px]">
+                <!-- Standard Calculator -->
+                <div id="standard" class="tab-content">
+                    <div class="display rounded-lg p-4 mb-4 text-right overflow-hidden">
+                        <div id="standard-history" class="text-secondary text-sm h-6 truncate"></div>
+                        <div id="standard-display" class="text-4xl md:text-5xl font-bold h-14 truncate">0</div>
+                    </div>
+                    <div class="grid grid-cols-4 gap-3">
+                        <button class="btn btn-secondary" onclick="clearDisplay('standard')">AC</button>
+                        <button class="btn btn-secondary" onclick="backspace('standard')">⌫</button>
+                        <button class="btn btn-secondary" onclick="appendCharacter('standard', '%')">%</button>
+                        <button class="btn btn-operator" onclick="appendCharacter('standard', '/')">÷</button>
+                        <button class="btn btn-primary" onclick="appendCharacter('standard', '7')">7</button>
+                        <button class="btn btn-primary" onclick="appendCharacter('standard', '8')">8</button>
+                        <button class="btn btn-primary" onclick="appendCharacter('standard', '9')">9</button>
+                        <button class="btn btn-operator" onclick="appendCharacter('standard', '*')">×</button>
+                        <button class="btn btn-primary" onclick="appendCharacter('standard', '4')">4</button>
+                        <button class="btn btn-primary" onclick="appendCharacter('standard', '5')">5</button>
+                        <button class="btn btn-primary" onclick="appendCharacter('standard', '6')">6</button>
+                        <button class="btn btn-operator" onclick="appendCharacter('standard', '-')">−</button>
+                        <button class="btn btn-primary" onclick="appendCharacter('standard', '1')">1</button>
+                        <button class="btn btn-primary" onclick="appendCharacter('standard', '2')">2</button>
+                        <button class="btn btn-primary" onclick="appendCharacter('standard', '3')">3</button>
+                        <button class="btn btn-operator" onclick="appendCharacter('standard', '+')">+</button>
+                        <button class="btn btn-primary col-span-2" onclick="appendCharacter('standard', '0')">0</button>
+                        <button class="btn btn-primary" onclick="appendCharacter('standard', '.')">.</button>
+                        <button class="btn btn-operator" onclick="calculate('standard')">=</button>
+                    </div>
+                </div>
+                <!-- Scientific Calculator -->
+                <div id="scientific" class="tab-content hidden">
+                    <div class="display rounded-lg p-4 mb-4 text-right overflow-hidden">
+                        <div id="scientific-history" class="text-secondary text-sm h-6 truncate"></div>
+                        <div id="scientific-display" class="text-4xl md:text-5xl font-bold h-14 truncate">0</div>
+                    </div>
+                    <div class="grid grid-cols-5 gap-3">
+                        <button class="btn btn-secondary text-lg" onclick="scientificFunction('sqrt')">√</button>
+                        <button class="btn btn-secondary text-lg" onclick="scientificFunction('pow')">x²</button>
+                        <button class="btn btn-secondary text-lg" onclick="scientificFunction('sin')">sin</button>
+                        <button class="btn btn-secondary text-lg" onclick="scientificFunction('cos')">cos</button>
+                        <button class="btn btn-secondary text-lg" onclick="scientificFunction('tan')">tan</button>
+                        <button class="btn btn-secondary text-lg" onclick="clearDisplay('scientific')">AC</button>
+                        <button class="btn btn-secondary text-lg" onclick="backspace('scientific')">⌫</button>
+                        <button class="btn btn-secondary text-lg" onclick="appendCharacter('scientific', '(')">(</button>
+                        <button class="btn btn-secondary text-lg" onclick="appendCharacter('scientific', ')')">)</button>
+                        <button class="btn btn-operator text-lg" onclick="appendCharacter('scientific', '/')">÷</button>
+                        <button class="btn btn-secondary text-lg" onclick="scientificFunction('log')">log</button>
+                        <button class="btn btn-primary" onclick="appendCharacter('scientific', '7')">7</button>
+                        <button class="btn btn-primary" onclick="appendCharacter('scientific', '8')">8</button>
+                        <button class="btn btn-primary" onclick="appendCharacter('scientific', '9')">9</button>
+                        <button class="btn btn-operator" onclick="appendCharacter('scientific', '*')">×</button>
+                        <button class="btn btn-secondary text-lg" onclick="scientificFunction('exp')">e</button>
+                        <button class="btn btn-primary" onclick="appendCharacter('scientific', '4')">4</button>
+                        <button class="btn btn-primary" onclick="appendCharacter('scientific', '5')">5</button>
+                        <button class="btn btn-primary" onclick="appendCharacter('scientific', '6')">6</button>
+                        <button class="btn btn-operator" onclick="appendCharacter('scientific', '-')">−</button>
+                        <button class="btn btn-secondary text-lg" onclick="scientificFunction('pi')">π</button>
+                        <button class="btn btn-primary" onclick="appendCharacter('scientific', '1')">1</button>
+                        <button class="btn btn-primary" onclick="appendCharacter('scientific', '2')">2</button>
+                        <button class="btn btn-primary" onclick="appendCharacter('scientific', '3')">3</button>
+                        <button class="btn btn-operator" onclick="appendCharacter('scientific', '+')">+</button>
+                        <button class="btn btn-secondary text-lg" onclick="scientificFunction('fact')">n!</button>
+                        <button class="btn btn-primary col-span-2" onclick="appendCharacter('scientific', '0')">0</button>
+                        <button class="btn btn-primary" onclick="appendCharacter('scientific', '.')">.</button>
+                        <button class="btn btn-operator" onclick="calculate('scientific')">=</button>
+                    </div>
+                </div>
+                <!-- Percentage Calculator -->
+                <div id="percentage" class="tab-content hidden p-4">
+                    <h2 class="text-2xl font-bold text-center mb-6">Percentage Calculator</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="perc-val1" class="block text-sm font-medium text-secondary">What is</label>
+                            <input type="number" id="perc-val1" class="w-full p-3 rounded-lg modern-input" placeholder="e.g., 5">
+                        </div>
+                        <div>
+                            <label for="perc-val2" class="block text-sm font-medium text-secondary">% of</label>
+                            <input type="number" id="perc-val2" class="w-full p-3 rounded-lg modern-input" placeholder="e.g., 20">
+                        </div>
+                        <div id="percentage-result-container" class="hidden summary-card p-4 rounded-lg mt-4">
+                            <p class="text-center font-bold mb-4 text-accent">Result</p>
+                            <div class="grid grid-cols-3 text-center items-center">
+                                <div><p class="font-bold text-2xl" id="perc-res-perc">0</p><p class="text-secondary text-sm">%</p></div>
+                                <div class="text-secondary">of</div>
+                                <div><p class="font-bold text-2xl" id="perc-res-of">0</p><p class="text-secondary text-sm">Value</p></div>
+                            </div>
+                            <div class="text-center text-4xl font-bold mt-4" id="perc-res-final">0</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Currency Calculator -->
+                <div id="currency" class="tab-content hidden p-4">
+                    <h2 class="text-2xl font-bold text-center mb-6">Currency Converter</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="amount" class="block text-sm font-medium text-secondary">Amount</label>
+                            <input type="number" id="amount" class="w-full p-3 rounded-lg modern-input" value="1">
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="w-1/2">
+                                <label for="from-currency" class="block text-sm font-medium text-secondary">From</label>
+                                <select id="from-currency" class="w-full p-3 rounded-lg modern-select"></select>
+                            </div>
+                            <div class="w-1/2">
+                                <label for="to-currency" class="block text-sm font-medium text-secondary">To</label>
+                                <select id="to-currency" class="w-full p-3 rounded-lg modern-select"></select>
+                            </div>
+                        </div>
+                        <div id="currency-result-container" class="hidden summary-card p-4 rounded-lg mt-4 text-center">
+                             <p class="text-secondary text-sm" id="curr-res-from">1 USD</p>
+                             <p class="text-5xl font-bold my-2" id="curr-res-to">1 EUR</p>
+                             <p class="text-secondary text-sm" id="curr-res-rate">Rate: 1.00</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- BMI Calculator -->
+                <div id="bmi" class="tab-content hidden p-4">
+                    <h2 class="text-2xl font-bold text-center mb-6">BMI Calculator</h2>
+                     <div class="space-y-4">
+                         <div class="flex flex-col sm:flex-row gap-4">
+                            <div class="w-full sm:w-1/2">
+                                <label for="height" class="block text-sm font-medium text-secondary">Height (cm)</label>
+                                <input type="number" id="height" class="w-full p-3 rounded-lg modern-input" placeholder="e.g., 175">
+                            </div>
+                            <div class="w-full sm:w-1/2">
+                                <label for="weight" class="block text-sm font-medium text-secondary">Weight (kg)</label>
+                                <input type="number" id="weight" class="w-full p-3 rounded-lg modern-input" placeholder="e.g., 70">
+                            </div>
+                        </div>
+                        <div id="bmi-result-container" class="hidden summary-card p-4 rounded-lg mt-4 text-center">
+                            <p class="text-secondary text-sm">Your BMI</p>
+                            <p class="text-5xl font-bold my-2" id="bmi-res-score">0.0</p>
+                            <p class="font-bold text-lg" id="bmi-res-category">---</p>
+                        </div>
+                     </div>
+                </div>
+                <!-- Age Calculator -->
+                <div id="age" class="tab-content hidden p-4">
+                    <h2 class="text-2xl font-bold text-center mb-4">Age Calculator</h2>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center summary-card p-3 rounded-lg">
+                            <label for="birthdate" class="text-secondary">Date of birth</label>
+                            <input type="date" id="birthdate" class="modern-input rounded-md p-1 bg-transparent text-right">
+                        </div>
+                        <div id="age-results-container" class="hidden">
+                            <div class="grid grid-cols-2 gap-4 my-4">
+                                <div class="summary-card p-4 rounded-lg text-center">
+                                    <p class="text-secondary text-sm">Age</p>
+                                    <p class="text-2xl font-bold"><span id="age-years">0</span> years</p>
+                                    <p class="text-secondary"><span id="age-months-days">0 months 0 days</span></p>
+                                </div>
+                                <div class="summary-card p-4 rounded-lg text-center">
+                                    <p class="text-secondary text-sm">Next birthday</p>
+                                    <p class="text-2xl font-bold" id="next-bday-weekday">---</p>
+                                    <p class="text-secondary" id="next-bday-rem">0 months 0 days</p>
+                                </div>
+                            </div>
+                            <div class="summary-card p-4 rounded-lg">
+                                <p class="text-center font-bold mb-4 text-accent">Summary</p>
+                                <div class="grid grid-cols-3 gap-y-4 text-center">
+                                    <div><p class="font-bold text-lg" id="summary-years">0</p><p class="text-secondary text-sm">Years</p></div>
+                                    <div><p class="font-bold text-lg" id="summary-months">0</p><p class="text-secondary text-sm">Months</p></div>
+                                    <div><p class="font-bold text-lg" id="summary-weeks">0</p><p class="text-secondary text-sm">Weeks</p></div>
+                                    <div><p class="font-bold text-lg" id="summary-days">0</p><p class="text-secondary text-sm">Days</p></div>
+                                    <div><p class="font-bold text-lg" id="summary-hours">0</p><p class="text-secondary text-sm">Hours</p></div>
+                                    <div><p class="font-bold text-lg" id="summary-minutes">0</p><p class="text-secondary text-sm">Minutes</p></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Area Calculator -->
+                <div id="area" class="tab-content hidden p-4">
+                    <h2 class="text-2xl font-bold text-center mb-6">Area Calculator</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="area-shape" class="block text-sm font-medium text-secondary">Shape</label>
+                            <select id="area-shape" class="w-full p-3 rounded-lg modern-select">
+                                <option value="rectangle">Rectangle</option>
+                                <option value="square">Square</option>
+                                <option value="circle">Circle</option>
+                                <option value="triangle">Triangle</option>
+                            </select>
+                        </div>
+                        <div id="area-inputs"></div>
+                        <button class="w-full btn btn-operator" onclick="calculateArea()">Calculate</button>
+                        <div id="area-result" class="text-center text-xl font-bold mt-4 h-8 transition-all"></div>
+                    </div>
+                </div>
+                <!-- Date Calculator -->
+                <div id="date" class="tab-content hidden p-4">
+                    <h2 class="text-2xl font-bold text-center mb-6">Date Calculator</h2>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center summary-card p-3 rounded-lg">
+                            <label for="date-from" class="text-secondary">From</label>
+                            <input type="date" id="date-from" class="modern-input rounded-md p-1 bg-transparent text-right">
+                        </div>
+                         <div class="flex justify-between items-center summary-card p-3 rounded-lg">
+                            <label for="date-to" class="text-secondary">To</label>
+                            <input type="date" id="date-to" class="modern-input rounded-md p-1 bg-transparent text-right">
+                        </div>
+                        <div id="date-result-container" class="hidden summary-card p-4 rounded-lg mt-4">
+                             <p class="text-center font-bold mb-4 text-accent">Difference</p>
+                             <div class="grid grid-cols-3 text-center">
+                                 <div><p class="font-bold text-2xl" id="date-diff-years">0</p><p class="text-secondary text-sm">Years</p></div>
+                                 <div><p class="font-bold text-2xl" id="date-diff-months">0</p><p class="text-secondary text-sm">Months</p></div>
+                                 <div><p class="font-bold text-2xl" id="date-diff-days">0</p><p class="text-secondary text-sm">Days</p></div>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- History -->
+                <div id="history" class="tab-content hidden">
+                    <div class="flex justify-between items-center mb-4 px-2">
+                        <h2 class="text-2xl font-bold">History</h2>
+                        <button class="px-4 py-2 rounded-lg font-semibold bg-red-600 text-white hover:bg-red-700 transition-all" onclick="showClearHistoryModal()">Clear</button>
+                    </div>
+                    <div id="history-list" class="space-y-3 max-h-96 overflow-y-auto p-2"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <footer class="text-center p-4 mt-auto text-secondary text-sm">
+        <div class="flex items-center justify-center gap-4">
+            <img id="footer-logo" src="logo-logo.png" alt="Your Logo" class="w-10 h-10 rounded-full">
+            <div>
+                <p>Founded by <a href="https://www.facebook.com/kaziMahbub2005" target="_blank">Mahbub</a></p>
+                <a href="index.html" class="hover:text-accent-start transition">Report an Issue</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modal for clearing history -->
+    <div id="clear-history-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50">
+        <div class="bg-zinc-800 rounded-xl p-8 shadow-lg text-center max-w-sm mx-4">
+            <h3 class="text-xl font-bold mb-4">Are you sure?</h3>
+            <p class="text-zinc-300 mb-6">This will permanently delete all your calculation history.</p>
+            <div class="flex justify-center gap-4">
+                <button onclick="hideClearHistoryModal()" class="px-6 py-2 rounded-lg bg-zinc-600 hover:bg-zinc-500 transition">Cancel</button>
+                <button onclick="confirmClearHistory()" class="px-6 py-2 rounded-lg bg-red-600 hover:bg-red-500 transition">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- App State ---
+        let currentExpression = { standard: '', scientific: '' };
+        let historyExpression = { standard: '', scientific: '' };
+        let calculationHistory = [];
+        const HISTORY_STORAGE_KEY = 'calculatorHistory';
+
+        // --- History Management (localStorage) ---
+        function saveCalculation(entry) {
+            calculationHistory.unshift(entry);
+            if (calculationHistory.length > 50) {
+                calculationHistory.pop();
+            }
+            localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(calculationHistory));
+            renderHistory();
+        }
+        
+        function loadHistory() {
+            const storedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+            if (storedHistory) {
+                try {
+                    calculationHistory = JSON.parse(storedHistory);
+                } catch(e) {
+                    console.error("Could not parse history from localStorage", e);
+                    calculationHistory = [];
+                }
+            }
+            renderHistory();
+        }
+
+        window.showClearHistoryModal = () => document.getElementById('clear-history-modal').classList.remove('hidden');
+        window.hideClearHistoryModal = () => document.getElementById('clear-history-modal').classList.add('hidden');
+        
+        window.confirmClearHistory = () => {
+            calculationHistory = [];
+            localStorage.removeItem(HISTORY_STORAGE_KEY);
+            renderHistory();
+            hideClearHistoryModal();
+        }
+
+        function renderHistory() {
+            const historyList = document.getElementById('history-list');
+            if (!historyList) return;
+            if (calculationHistory.length === 0) {
+                historyList.innerHTML = `<p class="text-center text-secondary py-8">No history yet.</p>`;
+                return;
+            }
+            historyList.innerHTML = calculationHistory.map(entry => `
+                <div class="history-item p-3 rounded-lg">
+                    <p class="text-sm text-secondary font-medium">${entry.type}</p>
+                    <p class="font-semibold text-lg break-words">${entry.calculation}</p>
+                    <p class="text-right text-xs text-secondary/70">${new Date(entry.timestamp).toLocaleString()}</p>
+                </div>
+            `).join('');
+        }
+
+        // --- Clock ---
+        const clockElement = document.getElementById('clock');
+        function updateClock() {
+            if (clockElement) {
+                clockElement.textContent = new Date().toLocaleTimeString();
+            }
+        }
+        
+        // --- UI Logic ---
+        const tabs = document.querySelectorAll('.tab-content');
+        const tabButtons = document.querySelectorAll('.tab-button');
+        let activeTab = 'standard';
+
+        window.openTab = (tabName) => {
+            if (activeTab === tabName) return;
+            
+            const currentTab = document.getElementById(activeTab);
+            const nextTab = document.getElementById(tabName);
+            
+            tabButtons.forEach(button => button.classList.remove('active'));
+            document.querySelector(`[onclick="openTab('${tabName}')"]`).classList.add('active');
+
+            if (currentTab) currentTab.classList.add('hidden');
+            if (nextTab) nextTab.classList.remove('hidden');
+            
+            activeTab = tabName;
+            if (tabName === 'history') {
+                renderHistory();
+            }
+        };
+
+        // --- Standard & Scientific Calculator Logic ---
+        function updateDisplay(type) {
+            const displayEl = document.getElementById(`${type}-display`);
+            const historyEl = document.getElementById(`${type}-history`);
+            if (displayEl) displayEl.innerText = currentExpression[type] || '0';
+            if (historyEl) historyEl.innerText = historyExpression[type];
+        }
+
+        window.appendCharacter = (type, char) => {
+            if (currentExpression[type].length > 40) return;
+            if (currentExpression[type] === 'Error') currentExpression[type] = '';
+            
+            if (currentExpression[type] === '0' && char !== '.') {
+                currentExpression[type] = char;
+            } else {
+                currentExpression[type] += char;
+            }
+            updateDisplay(type);
+        };
+
+        window.clearDisplay = (type) => {
+            currentExpression[type] = '';
+            historyExpression[type] = '';
+            updateDisplay(type);
+        };
+
+        window.backspace = (type) => {
+            if (currentExpression[type] === 'Error') {
+                clearDisplay(type);
+                return;
+            }
+            currentExpression[type] = currentExpression[type].slice(0, -1);
+            if (currentExpression[type] === '') currentExpression[type] = '0';
+            updateDisplay(type);
+        };
+
+        window.calculate = (type) => {
+            if (currentExpression[type] === '' || currentExpression[type] === 'Error') return;
+            try {
+                let expression = currentExpression[type].replace(/×/g, '*').replace(/÷/g, '/').replace(/%/g, '/100');
+                const result = math.evaluate(expression);
+
+                if (isNaN(result) || !isFinite(result)) throw new Error("Invalid calculation");
+
+                const calculationStr = `${currentExpression[type]} = ${result}`;
+                historyExpression[type] = currentExpression[type];
+                currentExpression[type] = String(result);
+                
+                saveCalculation({
+                    type: `${type.charAt(0).toUpperCase() + type.slice(1)} Calculator`,
+                    calculation: calculationStr,
+                    timestamp: Date.now()
+                });
+                updateDisplay(type);
+            } catch (error) {
+                historyExpression[type] = currentExpression[type];
+                currentExpression[type] = 'Error';
+                updateDisplay(type);
+            }
+        };
+        
+        window.scientificFunction = (func) => {
+            const type = 'scientific';
+            if (currentExpression[type] === 'Error') currentExpression[type] = '';
+            let val = currentExpression[type] || '0';
+
+            try {
+                let result;
+                let calculationStr;
+                switch (func) {
+                    case 'sqrt': result = math.sqrt(math.evaluate(val)); calculationStr = `sqrt(${val}) = ${result}`; break;
+                    case 'pow': result = math.pow(math.evaluate(val), 2); calculationStr = `(${val})^2 = ${result}`; break;
+                    case 'sin': result = math.sin(math.evaluate(val)); calculationStr = `sin(${val}) = ${result}`; break;
+                    case 'cos': result = math.cos(math.evaluate(val)); calculationStr = `cos(${val}) = ${result}`; break;
+                    case 'tan': result = math.tan(math.evaluate(val)); calculationStr = `tan(${val}) = ${result}`; break;
+                    case 'log': result = math.log10(math.evaluate(val)); calculationStr = `log(${val}) = ${result}`; break;
+                    case 'exp': result = math.exp(1); currentExpression[type] += result; updateDisplay(type); return;
+                    case 'pi': result = math.pi; currentExpression[type] += result; updateDisplay(type); return;
+                    case 'fact': result = math.factorial(math.evaluate(val)); calculationStr = `fact(${val}) = ${result}`; break;
+                }
+                
+                if (isNaN(result) || !isFinite(result)) throw new Error();
+
+                historyExpression[type] = calculationStr.split('=')[0];
+                currentExpression[type] = String(result);
+                saveCalculation({ type: 'Scientific Calculator', calculation: calculationStr, timestamp: Date.now() });
+            } catch {
+                currentExpression[type] = 'Error';
+            }
+            updateDisplay(type);
+        };
+
+        // --- Other Calculators ---
+        window.calculatePercentage = () => {
+            const val1 = parseFloat(document.getElementById('perc-val1').value);
+            const val2 = parseFloat(document.getElementById('perc-val2').value);
+            const resultContainer = document.getElementById('percentage-result-container');
+            if (isNaN(val1) || isNaN(val2)) { 
+                resultContainer.classList.add('hidden');
+                return; 
+            }
+            resultContainer.classList.remove('hidden');
+            const result = (val1 / 100) * val2;
+            
+            document.getElementById('perc-res-perc').textContent = val1;
+            document.getElementById('perc-res-of').textContent = val2;
+            document.getElementById('perc-res-final').textContent = result.toLocaleString();
+
+            saveCalculation({ type: 'Percentage', calculation: `${val1}% of ${val2} = ${result}`, timestamp: Date.now() });
+        };
+
+        async function setupCurrencyConverter() {
+            const fromCurrencyEl = document.getElementById('from-currency');
+            const toCurrencyEl = document.getElementById('to-currency');
+            try {
+                const response = await fetch('https://open.er-api.com/v6/latest/USD');
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+                const currencies = Object.keys(data.rates);
+                
+                currencies.forEach(currency => {
+                    fromCurrencyEl.add(new Option(currency, currency));
+                    toCurrencyEl.add(new Option(currency, currency));
+                });
+                fromCurrencyEl.value = 'USD';
+                toCurrencyEl.value = 'EUR';
+            } catch (error) {
+                document.getElementById('currency-result-container').innerHTML = `<p class="text-center text-secondary">Could not load currencies.</p>`;
+            }
+        }
+
+        window.convertCurrency = async () => {
+            const amount = parseFloat(document.getElementById('amount').value);
+            const from = document.getElementById('from-currency').value;
+            const to = document.getElementById('to-currency').value;
+            const resultContainer = document.getElementById('currency-result-container');
+            if (isNaN(amount)) { 
+                resultContainer.classList.add('hidden');
+                return; 
+            }
+            resultContainer.classList.remove('hidden');
+            document.getElementById('curr-res-to').textContent = 'Converting...';
+
+            try {
+                const response = await fetch(`https://open.er-api.com/v6/latest/${from}`);
+                const data = await response.json();
+                const rate = data.rates[to];
+                const result = (amount * rate);
+
+                document.getElementById('curr-res-from').textContent = `${amount.toLocaleString()} ${from} =`;
+                document.getElementById('curr-res-to').textContent = `${result.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${to}`;
+                document.getElementById('curr-res-rate').textContent = `1 ${from} = ${rate} ${to}`;
+
+                saveCalculation({ type: 'Currency', calculation: `${amount} ${from} to ${to} = ${result.toFixed(2)} ${to}`, timestamp: Date.now() });
+            } catch (error) {
+                document.getElementById('curr-res-to').textContent = 'Conversion failed.';
+            }
+        };
+
+        window.calculateBMI = () => {
+            const height = parseFloat(document.getElementById('height').value);
+            const weight = parseFloat(document.getElementById('weight').value);
+            const resultContainer = document.getElementById('bmi-result-container');
+            if (isNaN(height) || isNaN(weight) || height <= 0 || weight <= 0) {
+                resultContainer.classList.add('hidden');
+                return;
+            }
+            resultContainer.classList.remove('hidden');
+
+            const bmi = (weight / ((height / 100) ** 2)).toFixed(1);
+            let category = (bmi < 18.5) ? 'Underweight' : (bmi < 24.9) ? 'Normal' : (bmi < 29.9) ? 'Overweight' : 'Obesity';
+            
+            document.getElementById('bmi-res-score').textContent = bmi;
+            document.getElementById('bmi-res-category').textContent = category;
+
+            saveCalculation({ type: 'BMI', calculation: `H: ${height}cm, W: ${weight}kg = BMI: ${bmi} (${category})`, timestamp: Date.now() });
+        };
+        
+        function calculateAge() {
+            const birthdateInput = document.getElementById('birthdate');
+            if (!birthdateInput) return;
+            const birthdateStr = birthdateInput.value;
+            const resultsContainer = document.getElementById('age-results-container');
+            if (!birthdateStr) {
+                if(resultsContainer) resultsContainer.classList.add('hidden');
+                return;
+            }
+            if(resultsContainer) resultsContainer.classList.remove('hidden');
+
+            const birthDate = new Date(birthdateStr);
+            const now = new Date();
+
+            let years = now.getFullYear() - birthDate.getFullYear();
+            let months = now.getMonth() - birthDate.getMonth();
+            let days = now.getDate() - birthDate.getDate();
+
+            if (days < 0) {
+                months--;
+                days += new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+            }
+            if (months < 0) {
+                years--;
+                months += 12;
+            }
+            
+            document.getElementById('age-years').innerText = years;
+            document.getElementById('age-months-days').innerText = `${months} months ${days} days`;
+            saveCalculation({ type: 'Age', calculation: `${years}y, ${months}m, ${days}d old`, timestamp: Date.now() });
+
+            let nextBday = new Date(now.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+            if (now > nextBday) {
+                nextBday.setFullYear(now.getFullYear() + 1);
+            }
+            const daysUntilBday = Math.ceil((nextBday - now) / (1000 * 60 * 60 * 24));
+            const monthsRem = Math.floor(daysUntilBday / 30.44);
+            const daysRem = Math.floor(daysUntilBday % 30.44);
+
+            document.getElementById('next-bday-weekday').innerText = nextBday.toLocaleDateString('en-US', { weekday: 'long' });
+            document.getElementById('next-bday-rem').innerText = `${monthsRem} months ${daysRem} days`;
+            
+            const totalDays = Math.floor((now - birthDate) / (1000 * 60 * 60 * 24));
+            document.getElementById('summary-years').innerText = years;
+            document.getElementById('summary-months').innerText = (years * 12 + months).toLocaleString();
+            document.getElementById('summary-weeks').innerText = Math.floor(totalDays / 7).toLocaleString();
+            document.getElementById('summary-days').innerText = totalDays.toLocaleString();
+            document.getElementById('summary-hours').innerText = (totalDays * 24).toLocaleString();
+            document.getElementById('summary-minutes').innerText = (totalDays * 24 * 60).toLocaleString();
+        }
+
+        const areaInputTemplates = {
+            rectangle: `<div class="grid grid-cols-2 gap-4">
+                            <div><label for="area-length" class="text-sm">Length</label><input type="number" id="area-length" class="w-full p-2 rounded-lg modern-input"></div>
+                            <div><label for="area-width" class="text-sm">Width</label><input type="number" id="area-width" class="w-full p-2 rounded-lg modern-input"></div>
+                        </div>`,
+            square: `<div><label for="area-side" class="text-sm">Side</label><input type="number" id="area-side" class="w-full p-2 rounded-lg modern-input"></div>`,
+            circle: `<div><label for="area-radius" class="text-sm">Radius</label><input type="number" id="area-radius" class="w-full p-2 rounded-lg modern-input"></div>`,
+            triangle: `<div class="grid grid-cols-2 gap-4">
+                           <div><label for="area-base" class="text-sm">Base</label><input type="number" id="area-base" class="w-full p-2 rounded-lg modern-input"></div>
+                           <div><label for="area-height" class="text-sm">Height</label><input type="number" id="area-height" class="w-full p-2 rounded-lg modern-input"></div>
+                       </div>`
+        };
+
+        function updateAreaInputs() {
+            const areaShapeSelect = document.getElementById('area-shape');
+            const areaInputsContainer = document.getElementById('area-inputs');
+            if(areaInputsContainer) areaInputsContainer.innerHTML = areaInputTemplates[areaShapeSelect.value];
+        }
+
+        window.calculateArea = () => {
+            const shape = document.getElementById('area-shape').value;
+            let area = 0;
+            let calculationStr = '';
+            try {
+                if (shape === 'rectangle') {
+                    const l = parseFloat(document.getElementById('area-length').value);
+                    const w = parseFloat(document.getElementById('area-width').value);
+                    area = l * w;
+                    calculationStr = `Rectangle (${l}x${w}) = ${area}`;
+                } else if (shape === 'square') {
+                    const s = parseFloat(document.getElementById('area-side').value);
+                    area = s * s;
+                    calculationStr = `Square (${s}x${s}) = ${area}`;
+                } else if (shape === 'circle') {
+                    const r = parseFloat(document.getElementById('area-radius').value);
+                    area = Math.PI * r * r;
+                    calculationStr = `Circle (r=${r}) = ${area.toFixed(2)}`;
+                } else if (shape === 'triangle') {
+                    const b = parseFloat(document.getElementById('area-base').value);
+                    const h = parseFloat(document.getElementById('area-height').value);
+                    area = 0.5 * b * h;
+                    calculationStr = `Triangle (b=${b}, h=${h}) = ${area}`;
+                }
+                if(isNaN(area) || area < 0) area = 0;
+                document.getElementById('area-result').innerText = `Area: ${area.toFixed(2)}`;
+                saveCalculation({ type: 'Area', calculation: calculationStr, timestamp: Date.now() });
+            } catch (e) {
+                document.getElementById('area-result').innerText = 'Invalid Input';
+            }
+        };
+        
+        function calculateDateDifference() {
+            const fromInput = document.getElementById('date-from');
+            const toInput = document.getElementById('date-to');
+            if (!fromInput || !toInput) return;
+
+            const fromStr = fromInput.value;
+            const toStr = toInput.value;
+            const resultContainer = document.getElementById('date-result-container');
+
+            if (!fromStr || !toStr) {
+                if(resultContainer) resultContainer.classList.add('hidden');
+                return;
+            }
+            if(resultContainer) resultContainer.classList.remove('hidden');
+            
+            let fromDate = new Date(fromStr);
+            let toDate = new Date(toStr);
+
+            if (fromDate > toDate) {
+                [fromDate, toDate] = [toDate, fromDate]; // Swap if needed
+            }
+
+            let years = toDate.getFullYear() - fromDate.getFullYear();
+            let months = toDate.getMonth() - fromDate.getMonth();
+            let days = toDate.getDate() - fromDate.getDate();
+
+            if (days < 0) {
+                months--;
+                days += new Date(toDate.getFullYear(), toDate.getMonth(), 0).getDate();
+            }
+            if (months < 0) {
+                years--;
+                months += 12;
+            }
+            
+            document.getElementById('date-diff-years').innerText = years;
+            document.getElementById('date-diff-months').innerText = months;
+            document.getElementById('date-diff-days').innerText = days;
+            
+            const calculationStr = `Difference = ${years}y ${months}m ${days}d`;
+            if(years > 0 || months > 0 || days > 0) {
+                saveCalculation({ type: 'Date', calculation: calculationStr, timestamp: Date.now() });
+            }
+        }
+        
+        function bindEventListeners() {
+            document.getElementById('birthdate').addEventListener('change', calculateAge);
+            document.getElementById('date-from').addEventListener('change', calculateDateDifference);
+            document.getElementById('date-to').addEventListener('change', calculateDateDifference);
+            document.getElementById('area-shape').addEventListener('change', updateAreaInputs);
+            document.getElementById('perc-val1').addEventListener('input', calculatePercentage);
+            document.getElementById('perc-val2').addEventListener('input', calculatePercentage);
+            document.getElementById('amount').addEventListener('input', convertCurrency);
+            document.getElementById('from-currency').addEventListener('change', convertCurrency);
+            document.getElementById('to-currency').addEventListener('change', convertCurrency);
+            document.getElementById('height').addEventListener('input', calculateBMI);
+            document.getElementById('weight').addEventListener('input', calculateBMI);
+            
+            const themeToggle = document.getElementById('theme-toggle');
+            const body = document.body;
+            const lightIcon = document.getElementById('theme-icon-light');
+            const darkIcon = document.getElementById('theme-icon-dark');
+
+            themeToggle.addEventListener('click', () => {
+                body.classList.toggle('light-mode');
+                lightIcon.classList.toggle('hidden');
+                darkIcon.classList.toggle('hidden');
+                localStorage.setItem('theme', body.classList.contains('light-mode') ? 'light' : 'dark');
+            });
+
+            if (localStorage.getItem('theme') === 'light') {
+                body.classList.add('light-mode');
+                darkIcon.classList.add('hidden');
+                lightIcon.classList.remove('hidden');
+            }
+        }
+
+        // --- Initial Load ---
+        window.onload = () => {
+            bindEventListeners();
+            loadHistory();
+            updateClock();
+            setInterval(updateClock, 1000);
+            
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('birthdate').value = today;
+            document.getElementById('date-from').value = today;
+            document.getElementById('date-to').value = today;
+            
+            openTab('standard');
+            setupCurrencyConverter().then(convertCurrency);
+            updateAreaInputs();
+            calculateAge();
+            calculateDateDifference();
+        };
+    </script>
+</body>
+</html>
